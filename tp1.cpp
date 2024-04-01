@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
 
@@ -13,7 +14,11 @@ public:
     int profundidade;
     int lowpoint;
 
-    Vertice() : cor(0) {}
+    Vertice() : cor(0), pai(-1) {}
+
+    bool operator<(const Vertice& b) const {
+        return id < b.id;
+    }
 };
 
 
@@ -35,22 +40,33 @@ void printGraph(const vector<vector<Vertice>>& adj, vector<Vertice>& vertices) {
     }
 }
 
-void DFSVisit(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, Vertice& u, int& tempo, int depth) {
+void DFSVisit(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, Vertice& u, int& tempo, int depth, vector<Vertice>& verticesDeCorte) {
     tempo++;
     u.abertura = tempo;
     u.cor = 1;
     u.profundidade = depth;
     u.lowpoint = u.profundidade;
+    int filhos = 0;
+    bool verticeDeCorte = false;
 
     for (Vertice& v : adj[u.id]) { 
         if (vertices[v.id].cor == 0) {
+
+            filhos++;
             vertices[v.id].pai = u.id;
-            DFSVisit(adj, vertices, vertices[v.id], tempo, depth+1);
+            DFSVisit(adj, vertices, vertices[v.id], tempo, depth+1, verticesDeCorte);
             u.lowpoint = min(u.lowpoint, vertices[v.id].lowpoint);
+
+            if(vertices[v.id].lowpoint >= u.profundidade && u.pai != -1) {
+                verticeDeCorte = true;
+            }
         } else if (u.pai != v.id){
-            printf("%d : %d, %d\n", vertices[v.id].id, vertices[v.id].pai, vertices[u.id].id);
             u.lowpoint = min(u.lowpoint, vertices[v.id].profundidade);
         }
+    }
+
+    if ((u.pai != -1 && verticeDeCorte) || (u.pai == -1 && filhos > 1)){
+        verticesDeCorte.push_back(u);
     }
 
     tempo++;
@@ -58,7 +74,7 @@ void DFSVisit(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, Vertice& 
     u.cor = 2;
 }
 
-void DFS(vector<vector<Vertice>>& adj, vector<Vertice>& vertices){
+void DFS(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, vector<Vertice>& verticesDeCorte){
 
     for (auto& v : vertices) {
         v.cor = 0;
@@ -68,7 +84,7 @@ void DFS(vector<vector<Vertice>>& adj, vector<Vertice>& vertices){
     
     for (auto& v : vertices){
         if(v.cor == 0 && v.id != 0){
-            DFSVisit(adj, vertices, v, tempo, 0);
+            DFSVisit(adj, vertices, v, tempo, 0, verticesDeCorte);
         }
     }    
 }
@@ -92,25 +108,22 @@ int main(){
 
     Vertice v, u;
     for(int i = 1; i <= m; i++){
-        printf("Aresta %d: ", i);
         scanf("%d%d", &v.id, &u.id);
         adicionarAresta(adj, &vertices[v.id], &vertices[u.id]);
     }
 
-
-    DFS(adj, vertices);
+    vector<Vertice> verticesDeCorte;
+    DFS(adj, vertices, verticesDeCorte);
 
     printGraph(adj, vertices);
-
+    sort(verticesDeCorte.begin(), verticesDeCorte.end());
     //Saída
 
-    int f = -1;
+    int f = verticesDeCorte.size();
     printf("Número de vértices de corte: %d\n", f);
 
-    for(int i = 1; i <= n; i++){
-        if(true){ // mudar para: se for vértice de corte
-            printf("%d ", i);
-        }
+    for(int i = 0; i < f; i++){
+        printf("%d ", verticesDeCorte[i].id);
     }
 
     int c = -1;

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <set>
 
 using namespace std;
 
@@ -89,7 +90,43 @@ void DFS(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, vector<Vertice
     }    
 }
 
+void DFSWithoutCutVerticesVisit(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, Vertice& u, const set<int>& cutVertices, vector<Vertice>& clusterAtual) {
+    u.cor = 1;
+    clusterAtual.push_back(u);
 
+    if (cutVertices.find(u.id) == cutVertices.end()) {
+        for (Vertice& v : adj[u.id]) { 
+            if (vertices[v.id].cor == 0 ) {
+                DFSWithoutCutVerticesVisit(adj, vertices, vertices[v.id], cutVertices, clusterAtual);
+            }
+        }
+    }
+
+    u.cor = 2;
+}
+
+void DFSWithoutCutVertices(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, vector<Vertice>& verticesDeCorte, vector<vector<Vertice>>& clusters) {
+    
+    for (auto& v : vertices) {
+        v.cor = 0;
+    }
+
+    set<int> cutVertices;
+    for (const Vertice& v : verticesDeCorte) {
+        cutVertices.insert(v.id);
+    }
+
+    for (auto& v : vertices) {
+        vector<Vertice> clusterAtual;
+        if (v.cor == 0 && v.id != 0) { 
+            DFSWithoutCutVerticesVisit(adj, vertices, vertices[v.id], cutVertices, clusterAtual);
+        }
+        if (!clusterAtual.empty()) {
+            clusters.push_back(clusterAtual);
+            clusterAtual.clear();
+        }
+    }
+}
 
 int main(){
 
@@ -115,6 +152,9 @@ int main(){
     vector<Vertice> verticesDeCorte;
     DFS(adj, vertices, verticesDeCorte);
 
+    vector<vector<Vertice>> clusters;
+    DFSWithoutCutVertices(adj, vertices, verticesDeCorte, clusters);
+
     printGraph(adj, vertices);
     sort(verticesDeCorte.begin(), verticesDeCorte.end());
     //Saída
@@ -126,12 +166,12 @@ int main(){
         printf("%d ", verticesDeCorte[i].id);
     }
 
-    int c = -1;
+    int c = clusters.size();
     printf("\nNúmero de clusters: %d\n", c);
-    for(int j = 1; j < 2; j++){ //mudar o for para tamanho da tabela de cluster
-        printf("%d ", n+j);
-        for(int k = 1; k < n; k++){
-            printf("%d", k);
+    for(int j = 0; j < c; j++){ //mudar o for para tamanho da tabela de cluster
+        printf("\n%d ", j+n+1);
+        for(int k = 0; k < clusters[j].size(); k++){
+            printf("%d ", clusters[j][k].id);
         }
     }
     return 0;

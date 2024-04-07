@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <stack>
 #include <set>
 
 using namespace std;
@@ -22,26 +23,12 @@ public:
     }
 };
 
-
 void adicionarAresta(vector<vector<Vertice>>& adj, Vertice* u, Vertice* v) {
     adj[u->id].push_back(*v);
     adj[v->id].push_back(*u);
 }
 
-
-void printGraph(const vector<vector<Vertice>>& adj, vector<Vertice>& vertices) {
-    int V = adj.size()-1;
-    for (int i = 1; i <= V; ++i) {
-        cout << "Vértice " << i << " tem vizinhos:";
-        for (const Vertice& v : adj[i])
-            cout << " -> " << vertices[v.id].id << "(" << vertices[v.id].cor << ", "
-            << vertices[v.id].abertura << ", " << vertices[v.id].fechamento << ", "
-            << vertices[v.id].profundidade << ", " << vertices[v.id].lowpoint << ", " << vertices[v.id].pai << ")";
-        cout << endl;
-    }
-}
-
-void DFSVisit(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, Vertice& u, int& tempo, int depth, vector<Vertice>& verticesDeCorte) {
+void DFSVisit(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, Vertice& u, int& tempo, int depth, vector<Vertice>& verticesDeCorte, stack<pair<int, int>>& arestas, vector<set<pair<int, int>>>& biconnectedComponents) {
     tempo++;
     u.abertura = tempo;
     u.cor = 1;
@@ -55,14 +42,36 @@ void DFSVisit(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, Vertice& 
 
             filhos++;
             vertices[v.id].pai = u.id;
-            DFSVisit(adj, vertices, vertices[v.id], tempo, depth+1, verticesDeCorte);
+            arestas.push(make_pair(u.id, v.id));
+            DFSVisit(adj, vertices, vertices[v.id], tempo, depth+1, verticesDeCorte, arestas, biconnectedComponents);
             u.lowpoint = min(u.lowpoint, vertices[v.id].lowpoint);
 
             if(vertices[v.id].lowpoint >= u.profundidade && u.pai != -1) {
                 verticeDeCorte = true;
             }
+
+            if (vertices[v.id].lowpoint >= u.profundidade) {
+                set<pair<int, int>> biconnectedComponent;
+                while (!arestas.empty() && (arestas.top().first != u.id || arestas.top().second != v.id)) {
+                    int uId = arestas.top().first;
+                    int vId = arestas.top().second;
+                    arestas.pop();
+                    biconnectedComponent.insert(make_pair(min(uId, vId), max(uId, vId)));
+                }
+                if (!arestas.empty()) {
+                    int uId = arestas.top().first;
+                    int vId = arestas.top().second;
+                    arestas.pop();
+                    biconnectedComponent.insert(make_pair(min(uId, vId), max(uId, vId)));
+                }
+                
+                biconnectedComponents.push_back(biconnectedComponent);
+            }
         } else if (u.pai != v.id){
             u.lowpoint = min(u.lowpoint, vertices[v.id].profundidade);
+            if (vertices[v.id].profundidade < u.profundidade) {
+                arestas.push(make_pair(u.id, v.id));
+            }
         }
     }
 
@@ -75,66 +84,57 @@ void DFSVisit(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, Vertice& 
     u.cor = 2;
 }
 
-void DFS(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, vector<Vertice>& verticesDeCorte){
+void DFS(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, vector<Vertice>& verticesDeCorte, vector<set<pair<int, int>>>& biconnectedComponents){
 
     for (auto& v : vertices) {
         v.cor = 0;
     }
 
     int tempo = 0;
+    stack<pair<int, int>> arestas;
     
     for (auto& v : vertices){
         if(v.cor == 0 && v.id != 0){
-            DFSVisit(adj, vertices, v, tempo, 0, verticesDeCorte);
+            DFSVisit(adj, vertices, v, tempo, 0, verticesDeCorte, arestas, biconnectedComponents);
         }
     }    
 }
 
-void DFSWithoutCutVerticesVisit(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, Vertice& u, const set<int>& cutVertices, vector<Vertice>& clusterAtual) {
-    u.cor = 1;
-    clusterAtual.push_back(u);
-
-    if (cutVertices.find(u.id) == cutVertices.end()) {
-        for (Vertice& v : adj[u.id]) { 
-            if (vertices[v.id].cor == 0 ) {
-                DFSWithoutCutVerticesVisit(adj, vertices, vertices[v.id], cutVertices, clusterAtual);
+void printVertexCutClusterForest(const vector<Vertice>& verticesDeCorte, const vector<set<pair<int, int>>>& biconnectedComponents, int n) {
+    vector<pair<int, int>> forest;
+    int clusterNumber = n + 1;
+    for (int j = 0; j < biconnectedComponents.size(); j++) {
+        for (const auto& verticeDeCorte : verticesDeCorte) {
+            for (const auto& cluster : biconnectedComponents[j]) {
+                if (cluster.first == verticeDeCorte.id || cluster.second == verticeDeCorte.id) {
+                    forest.push_back(make_pair(verticeDeCorte.id, clusterNumber));
+                    break;
+                }
             }
         }
+        clusterNumber++;
     }
-
-    u.cor = 2;
-}
-
-void DFSWithoutCutVertices(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, vector<Vertice>& verticesDeCorte, vector<vector<Vertice>>& clusters) {
+    sort(forest.begin(), forest.end());
     
-    for (auto& v : vertices) {
-        v.cor = 0;
-    }
+    int numVertices = verticesDeCorte.size() + biconnectedComponents.size();
+    int numArestas = forest.size();
+    printf("%d %d\n", numVertices, numArestas);
 
-    set<int> cutVertices;
-    for (const Vertice& v : verticesDeCorte) {
-        cutVertices.insert(v.id);
-    }
-
-    for (auto& v : vertices) {
-        vector<Vertice> clusterAtual;
-        if (v.cor == 0 && v.id != 0) { 
-            DFSWithoutCutVerticesVisit(adj, vertices, vertices[v.id], cutVertices, clusterAtual);
-        }
-        if (!clusterAtual.empty()) {
-            clusters.push_back(clusterAtual);
-            clusterAtual.clear();
-        }
+    for (const auto& p : forest) {
+        printf("%d %d\n", p.first, p.second);
     }
 }
+
 
 int main(){
 
     //Entrada
     
     int n, m;
-    printf("Número de vértices e arestas: ");
-    scanf("%d%d", &n, &m);
+    if (scanf("%d%d", &n, &m) != 2) {
+        cerr << "Erro ao ler entrada" << endl;
+        return 1;
+    }
 
     vector<vector<Vertice>> adj(n+1); // uma posição a mais, porque não vou usar o 0
     vector<Vertice> vertices(n+1);
@@ -145,35 +145,54 @@ int main(){
 
     Vertice v, u;
     for(int i = 1; i <= m; i++){
-        scanf("%d%d", &v.id, &u.id);
+        if (scanf("%d%d", &v.id, &u.id) != 2) {
+            cerr << "Erro ao ler entrada" << endl;
+            return 1;
+        }
         adicionarAresta(adj, &vertices[v.id], &vertices[u.id]);
     }
 
     vector<Vertice> verticesDeCorte;
-    DFS(adj, vertices, verticesDeCorte);
+    vector<set<pair<int, int>>> biconnectedComponents;
 
-    vector<vector<Vertice>> clusters;
-    DFSWithoutCutVertices(adj, vertices, verticesDeCorte, clusters);
+    DFS(adj, vertices, verticesDeCorte, biconnectedComponents);
 
-    printGraph(adj, vertices);
-    sort(verticesDeCorte.begin(), verticesDeCorte.end());
     //Saída
 
     int f = verticesDeCorte.size();
-    printf("Número de vértices de corte: %d\n", f);
+    printf("%d\n", f);
+
+    sort(verticesDeCorte.begin(), verticesDeCorte.end());
 
     for(int i = 0; i < f; i++){
-        printf("%d ", verticesDeCorte[i].id);
+        printf("%d\n", verticesDeCorte[i].id);
     }
 
-    int c = clusters.size();
-    printf("\nNúmero de clusters: %d\n", c);
-    for(int j = 0; j < c; j++){ //mudar o for para tamanho da tabela de cluster
-        printf("\n%d ", j+n+1);
-        for(int k = 0; k < clusters[j].size(); k++){
-            printf("%d ", clusters[j][k].id);
+    int c = biconnectedComponents.size();
+    printf("%d", c);
+
+    sort(biconnectedComponents.begin(), biconnectedComponents.end(), [](const set<pair<int, int>>& a, const set<pair<int, int>>& b) {
+        return *a.begin() < *b.begin();
+    });
+
+    for(int j = 0; j < c; j++) {
+        set<int> uniqueVertices; // para armazenar vértices únicos
+        for (auto it = biconnectedComponents[j].begin(); it != biconnectedComponents[j].end(); ++it) {
+            uniqueVertices.insert(it->first);
+            uniqueVertices.insert(it->second);
+        }
+        
+
+        printf("\n%d %lu ", n + j + 1, uniqueVertices.size());
+        for (auto vertex : uniqueVertices) {
+            printf("%d ", vertex);
         }
     }
+
+    printf("\n");
+
+
+    printVertexCutClusterForest(verticesDeCorte, biconnectedComponents, n);
+
     return 0;
 }
-

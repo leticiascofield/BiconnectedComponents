@@ -64,7 +64,6 @@ void DFSVisit(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, Vertice& 
                     arestas.pop();
                     biconnectedComponent.insert(make_pair(min(uId, vId), max(uId, vId)));
                 }
-                
                 biconnectedComponents.push_back(biconnectedComponent);
             }
         } else if (u.pai != v.id){
@@ -85,7 +84,6 @@ void DFSVisit(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, Vertice& 
 }
 
 void DFS(vector<vector<Vertice>>& adj, vector<Vertice>& vertices, vector<Vertice>& verticesDeCorte, vector<set<pair<int, int>>>& biconnectedComponents){
-
     for (auto& v : vertices) {
         v.cor = 0;
     }
@@ -182,7 +180,6 @@ int main(){
             uniqueVertices.insert(it->second);
         }
         
-
         printf("\n%d %lu ", n + j + 1, uniqueVertices.size());
         for (auto vertex : uniqueVertices) {
             printf("%d ", vertex);
@@ -190,8 +187,6 @@ int main(){
     }
 
     printf("\n");
-
-
     printVertexCutClusterForest(verticesDeCorte, biconnectedComponents, n);
 
     return 0;

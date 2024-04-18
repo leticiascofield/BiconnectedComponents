@@ -39,7 +39,7 @@ Depois de compilado, basta executar o programa e fornecer as entradas necessári
 ```
 
 ## Mais informações e detalhes
-Este README fornece uma visão geral do trabalho e da implementação. Para mais detalhes sobre o funcionamento do algoritmo e sobre o código-fonte, consulte o enunciado no trabalho (enunciado.pdf) e próprio código (tp1.cpp).
+Este README fornece uma visão geral do trabalho e da implementação. Para mais detalhes sobre o funcionamento do algoritmo e sobre o código-fonte, consulte o enunciado no trabalho (enunciado.pdf) e o próprio código (tp1.cpp).
 
 ## Referências
 GeeksforGeeks: [Biconnected Components - GeeksforGeeks](https://www.geeksforgeeks.org/biconnected-components/?ref=ml_lbp) <br>
